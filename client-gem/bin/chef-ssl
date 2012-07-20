@@ -1,0 +1,7 @@
+require "rubygems"
+require "commander/import"
+require "chef-ssl/client"
+
+HighLine.colorize_strings
+
+load File.expand_path('../lib/chef-ssl/command.rb', File.dirname(__FILE__))

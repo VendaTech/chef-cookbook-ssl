@@ -1,0 +1,6 @@
+=NAME
+
+"chef-ssl" Client
+
+
+
