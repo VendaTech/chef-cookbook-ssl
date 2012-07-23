@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.description = s.summary
   s.author = "Venda"
   s.email = "auto-ssl@venda.com"
-  s.homepage = "http://docs.uk.venda.com/vendadocs/TeamAwesome/Project☃/pki"
+  s.homepage = "https://github.com/VendaTech/chef-cookbook-ssl"
 
   s.add_dependency "chef",          ">= 0.10.0"
   s.add_dependency "spice",         "~> 1.0.3"
