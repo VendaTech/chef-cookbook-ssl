@@ -8,4 +8,8 @@
 #
 
 include_recipe "gpg"
-chef_gem "eassl2"
+chef_gem "eassl2" do
+  action :nothing
+end.run_action(:upgrade)
+
+require 'eassl'
