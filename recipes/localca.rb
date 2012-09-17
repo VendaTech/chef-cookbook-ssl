@@ -25,8 +25,6 @@ search('certificates') do |item|
 
   if !item['cacert'].nil?
     cert = OpenSSL::X509::Certificate.new(item['cacert'])
-    Chef::Log.info(cert.subject)
-
     hash = sprintf("%x", cert.subject.hash)
     hash_path = File.join(certs_dir, "#{hash}.0")
 
