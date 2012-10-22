@@ -99,7 +99,7 @@ action :create do
           :department => node['ssl']['department'],
           :organization => node['ssl']['organization']
         )
-        cert = ssl_issue_self_signed_cert(
+        cert, ca = ssl_issue_self_signed_cert(
           csr,
           new_resource.type,
           :city => node['ssl']['city'],
@@ -131,6 +131,13 @@ action :create do
       unless cert.nil?
         file new_resource.certificate do
           content cert.to_pem
+          action :create
+        end
+      end
+
+      if new_resource.cacertificate && !ca.nil?
+        file new_resource.cacertificate do
+          content ca.certificate.to_pem
           action :create
         end
       end

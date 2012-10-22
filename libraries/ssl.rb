@@ -32,5 +32,5 @@ def ssl_issue_self_signed_cert(csr, type, name)
     :ca_certificate => ca.certificate
   )
   cert.sign(ca.key)
-  cert
+  return cert, ca
 end
