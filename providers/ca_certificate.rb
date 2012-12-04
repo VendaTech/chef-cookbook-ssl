@@ -12,7 +12,7 @@ action :create do
     end
   end
 
-  if !node['cacerts'].has_key?(new_resource.cacertificate) || node['cacerts'][new_resource.cacertificate] != cacert
+  if !node['cacerts'].has_key?(new_resource.ca) || node['cacerts'][new_resource.ca] != cacert
     # install the CA certificate where requested, and add it to the node
     if cacert
       file new_resource.cacertificate do
@@ -21,7 +21,7 @@ action :create do
         owner new_resource.owner
         group new_resource.group
       end
-      node['cacerts'][new_resource.cacertificate] = cacert
+      node['cacerts'][new_resource.ca] = cacert
       new_resource.updated_by_last_action(true)
     end
   end
