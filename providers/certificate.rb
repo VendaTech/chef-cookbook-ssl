@@ -39,18 +39,27 @@ action :create do
   end
 
   if certbag['certificate']
-    # If we found a certificate databag, install it.
+    # If we found a certificate databag, consider installing it.
 
+    # verify first that we do have a key for this certificate
     if ::File.size?(new_resource.key)
-      file new_resource.certificate do
-        content certbag['certificate']
-        action :create
-      end
-      if new_resource.cacertificate && certbag['cacert']
-        file new_resource.cacertificate do
-          content certbag['cacert']
+
+      # verify that the certificate we've found corresponds to the key we have
+      # (if not, maybe someone created the key+cert manually)
+      if ssl_verify_key_cert_match(::File.read(new_resource.key), certbag['certificate'])
+        Chef::Log.info("installing certificate #{new_resource.name} (id #{cert_id})")
+        file new_resource.certificate do
+          content certbag['certificate']
           action :create
         end
+        if new_resource.cacertificate && certbag['cacert']
+          file new_resource.cacertificate do
+            content certbag['cacert']
+            action :create
+          end
+        end
+      else
+        Chef::Log.warn("not installing certificate #{new_resource.name} (id #{cert_id}), does not match key")
       end
     else
       Chef::Log.warn("found certificate #{new_resource.name} (id #{cert_id}), for which we don't have the key")

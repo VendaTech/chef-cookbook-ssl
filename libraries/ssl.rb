@@ -34,3 +34,9 @@ def ssl_issue_self_signed_cert(csr, type, name)
   cert.sign(ca.key)
   return cert, ca
 end
+
+def ssl_verify_key_cert_match(key_text, cert_text)
+  key = OpenSSL::PKey::RSA.new(key_text)
+  cert = OpenSSL::X509::Certificate.new(cert_text)
+  key.n == cert.public_key.n
+end
