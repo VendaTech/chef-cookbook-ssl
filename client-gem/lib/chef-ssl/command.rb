@@ -67,20 +67,20 @@ command :makeca do |c|
   c.syntax = "chef-ssl makeca [options]"
   c.description = "Creates a new CA"
   c.example "Upload cert for CSR www.venda.com",
-            "chef-ssl makeca --ca-name '/CN=My New CA' --ca-path ./newCA"
+            "chef-ssl makeca --dn '/CN=My New CA' --ca-path ./newCA"
 
   c.option "--ca-path=STRING", String, "the path to the new CA"
-  c.option "--ca-name=STRING", String, "the distinguished name of the new CA"
+  c.option "--dn=STRING", String, "the distinguished name of the new CA"
 
   c.action do |args, options|
     begin
-      name = OpenSSL::X509::Name.parse(options.ca_name)
+      name = OpenSSL::X509::Name.parse(options.dn)
     rescue NoMethodError
-      raise "--ca-name is required and must be a distinguished name"
+      raise "--dn is required and must be a distinguished name"
     rescue TypeError
-      raise "--ca-name is required and must be a distinguished name"
+      raise "--dn is required and must be a distinguished name"
     rescue OpenSSL::X509::NameError => e
-      raise "--ca-name must specify a valid DN: #{e.message}"
+      raise "--dn must specify a valid DN: #{e.message}"
     end
 
     raise "CA path is required" unless options.ca_path
