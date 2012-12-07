@@ -86,16 +86,16 @@ command :makeca do |c|
     raise "CA path is required" unless options.ca_path
     raise "CA path must not already exist" if Dir.glob(options.ca_path).length > 0
 
-    puts "#{'New CA DN'.cyan}: #{name.to_s}"
-    puts
+    say "#{'New CA DN'.cyan}: #{name.to_s}"
+    say ""
 
     passphrase = ask("Enter new CA passphrase:  ") { |q| q.echo = false }
     passphrase2 = ask("Re-enter new CA passphrase:  ") { |q| q.echo = false }
     raise "passphrases do not match" unless passphrase == passphrase2
 
-    print "\n#{'Creating new CA'.cyan}: "
+    say "\n#{'Creating new CA'.cyan}: "
     ChefSSL::Client::SigningAuthority.create(name, options.ca_path, passphrase)
-    puts "done"
+    say "done"
   end
 end
 
@@ -110,17 +110,17 @@ command :search do |c|
   c.action do |args, options|
     client = ChefSSL::Client.new
 
-    puts "#{'Search CA'.cyan}: #{options.ca_name}" if options.ca_name
+    say "#{'Search CA'.cyan}: #{options.ca_name}" if options.ca_name
 
     client.ca_search(options.ca_name) do |req|
       puts
-      puts "#{'     Node Hostname'.cyan}: #{req.host}"
-      puts "#{'  Certificate Type'.cyan}: #{req.type.bold}"
-      puts "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
-      puts "#{'      Requested CA'.cyan}: #{req.ca.bold}"
-      puts "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
+      say "#{'     Node Hostname'.cyan}: #{req.host}"
+      say "#{'  Certificate Type'.cyan}: #{req.type.bold}"
+      say "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
+      say "#{'      Requested CA'.cyan}: #{req.ca.bold}"
+      say "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
       puts
-      puts HighLine.color(req.to_pem, :bright_black)
+      say HighLine.color(req.to_pem, :bright_black)
     end
   end
 end
@@ -139,17 +139,17 @@ command :sign do |c|
 
     client = ChefSSL::Client.new
 
-    puts "#{'Search name'.cyan}: #{options.name}"
+    say "#{'Search name'.cyan}: #{options.name}"
 
     client.common_name_search(options.name) do |req|
       puts
-      puts "#{'     Node Hostname'.cyan}: #{req.host}"
-      puts "#{'  Certificate Type'.cyan}: #{req.type.bold}"
-      puts "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
-      puts "#{'      Requested CA'.cyan}: #{req.ca.bold}"
-      puts "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
+      say "#{'     Node Hostname'.cyan}: #{req.host}"
+      say "#{'  Certificate Type'.cyan}: #{req.type.bold}"
+      say "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
+      say "#{'      Requested CA'.cyan}: #{req.ca.bold}"
+      say "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
       puts
-      puts HighLine.color(req.to_pem, :bright_black)
+      say HighLine.color(req.to_pem, :bright_black)
 
       cert = nil
 
@@ -169,13 +169,13 @@ command :sign do |c|
       end
 
       if cert
-        puts "#{' Signed:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
-        puts "#{'Subject:'.cyan} #{cert.subject}"
-        puts "#{' Issuer:'.cyan} #{cert.issuer}"
-        puts HighLine.color(cert.to_pem, :bright_black)
+        say "#{' Signed:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
+        say "#{'Subject:'.cyan} #{cert.subject}"
+        say "#{' Issuer:'.cyan} #{cert.issuer}"
+        say HighLine.color(cert.to_pem, :bright_black)
 
         unless cert.subject == req.subject
-          puts "#{'WARNING:'.red.bold} #{'Issued certificate DN does not match request DN!'.bold}"
+          say "#{'WARNING:'.red.bold} #{'Issued certificate DN does not match request DN!'.bold}"
         end
 
         HighLine.new.choose do |menu|
@@ -185,9 +185,9 @@ command :sign do |c|
           menu.choice :yes do
             begin
               cert.save!
-              puts "Saved OK"
+              say "Saved OK"
             rescue ChefSSL::Client::CertSaveFailed => e
-              puts "Error saving: #{e.message}"
+              say "Error saving: #{e.message}"
             end
           end
           menu.choice :no do
@@ -220,17 +220,17 @@ command :autosign do |c|
 
     client = ChefSSL::Client.new
 
-    puts "#{'Search CA'.cyan}: #{options.ca_name}"
+    say "#{'Search CA'.cyan}: #{options.ca_name}"
 
     client.ca_search(options.ca_name) do |req|
       puts
-      puts "#{'     Node Hostname'.cyan}: #{req.host}"
-      puts "#{'  Certificate Type'.cyan}: #{req.type.bold}"
-      puts "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
-      puts "#{'      Requested CA'.cyan}: #{req.ca.bold}"
-      puts "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
+      say "#{'     Node Hostname'.cyan}: #{req.host}"
+      say "#{'  Certificate Type'.cyan}: #{req.type.bold}"
+      say "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
+      say "#{'      Requested CA'.cyan}: #{req.ca.bold}"
+      say "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
       puts
-      puts HighLine.color(req.to_pem, :bright_black)
+      say HighLine.color(req.to_pem, :bright_black)
 
       HighLine.new.choose do |menu|
         menu.layout = :one_line
@@ -239,13 +239,13 @@ command :autosign do |c|
         menu.choice :yes do
           cert = authority.sign(req)
           puts
-          puts "#{'Signed:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
-          puts HighLine.color(cert.to_pem, :bright_black)
+          say "#{'Signed:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
+          say HighLine.color(cert.to_pem, :bright_black)
           begin
             cert.save!
-            puts "Saved OK"
+            say "Saved OK"
           rescue ChefSSL::Client::CertSaveFailed => e
-            puts "Error saving: #{e.message}"
+            say "Error saving: #{e.message}"
           end
         end
 
@@ -255,6 +255,6 @@ command :autosign do |c|
       end
     end
 
-    puts "All CSRs processed."
+    say "All CSRs processed."
   end
 end
