@@ -14,9 +14,9 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/VendaTech/chef-cookbook-ssl"
 
   s.add_dependency "chef",          ">= 0.10.0"
-  s.add_dependency "spice",         "~> 1.0.3"
+  s.add_dependency "spice",         "= 1.0.4"   # >= 1.0.6 brings breaking changes
   s.add_dependency "eassl2",        "~> 2.0.0"
-  s.add_dependency "highline",      "~> 1.6.0"
+  s.add_dependency "highline",      ">= 1.6.15" # < .15 apparently buggy
   s.add_dependency "commander",     "~> 4.1.0"
   s.add_dependency "multi_json",    ">= 1.0.0"
   s.add_dependency "activesupport", ">= 3.1.0"
