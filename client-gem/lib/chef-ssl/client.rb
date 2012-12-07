@@ -19,8 +19,13 @@ module ChefSSL
       path = File.expand_path('knife.rb', '~/.chef')
       Chef::Config.from_file(path)
       Spice.reset
+
+      # avoid Spice issue if chef_server_url has a trailing slash.
+      chef_server_url = Chef::Config.chef_server_url
+      chef_server_url.gsub!(/\/$/, '')
+
       Spice.setup do |s|
-        s.server_url = Chef::Config.chef_server_url
+        s.server_url = chef_server_url
         s.client_name = Chef::Config.node_name
         s.client_key = Spice.read_key_file(File.expand_path(Chef::Config.client_key))
       end
