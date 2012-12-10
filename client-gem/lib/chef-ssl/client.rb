@@ -4,6 +4,7 @@ require 'json'
 require 'openssl'
 require 'digest/sha2'
 require 'active_support/hash_with_indifferent_access'
+require 'chef/knife'
 require 'chef/config'
 require 'chef/node'
 
@@ -16,8 +17,7 @@ module ChefSSL
   class Client
 
     def initialize
-      path = File.expand_path('knife.rb', '~/.chef')
-      Chef::Config.from_file(path)
+      Chef::Knife.new.configure_chef
       Spice.reset
       Spice.setup do |s|
         s.server_url = Chef::Config.chef_server_url
