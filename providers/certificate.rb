@@ -73,7 +73,7 @@ action :create do
         # Generate the new CSR using the existing key
         csr = ssl_generate_csr(
           key,
-          :common_name => new_resource.name,
+          :common_name => new_resource.cn || new_resource.name,
           :city => node['ssl']['city'],
           :state => node['ssl']['state'],
           :email => node['ssl']['email'],
@@ -91,7 +91,7 @@ action :create do
         # Generate the CSR, and sign it with a scratch CA to create a
         # temporary certificate.
         csr = ssl_generate_csr(key,
-          :common_name => new_resource.name,
+          :common_name => new_resource.cn || new_resource.name,
           :city => node['ssl']['city'],
           :state => node['ssl']['state'],
           :email => node['ssl']['email'],

@@ -78,6 +78,7 @@ REST API Server Certificate, with CA Certificate:
 REST API Client Certificate:
 
     ssl_certificate "service-#{node['fqdn']}" do
+      cn node['fqdn']
       ca "Service-CA"
       type "client"
       key "/etc/service/client_key.pem"
