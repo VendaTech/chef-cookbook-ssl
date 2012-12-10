@@ -4,6 +4,7 @@ require 'json'
 require 'openssl'
 require 'digest/sha2'
 require 'active_support/hash_with_indifferent_access'
+require 'chef/knife'
 require 'chef/config'
 require 'chef/node'
 
@@ -16,8 +17,12 @@ module ChefSSL
   class Client
 
     def initialize
-      path = File.expand_path('knife.rb', '~/.chef')
-      Chef::Config.from_file(path)
+      Chef::Knife.new.tap do |knife|
+        # Set the log-level, knife style. This equals :error level
+        Chef::Config[:verbosity] = knife.config[:verbosity] ||= 0
+        knife.configure_chef
+      end
+
       Spice.reset
 
       # avoid Spice issue if chef_server_url has a trailing slash.
