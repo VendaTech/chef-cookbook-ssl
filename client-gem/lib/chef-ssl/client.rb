@@ -17,7 +17,12 @@ module ChefSSL
   class Client
 
     def initialize
-      Chef::Knife.new.configure_chef
+      Chef::Knife.new.tap do |knife|
+        # Set the log-level, knife style. This equals :error level
+        Chef::Config[:verbosity] = knife.config[:verbosity] ||= 0
+        knife.configure_chef
+      end
+
       Spice.reset
       Spice.setup do |s|
         s.server_url = Chef::Config.chef_server_url
