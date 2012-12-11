@@ -6,6 +6,7 @@ def initialize(*args)
 end
 
 attribute :name, :kind_of => String, :name_attribute => true
+attribute :cn,   :kind_of => String
 attribute :ca,   :kind_of => String, :required => true
 attribute :type, :kind_of => String, :default => 'server', :equal_to => ['server', 'client']
 attribute :bits, :kind_of => Fixnum, :default => 2048, :equal_to => [1024, 2048, 4096, 8192]
