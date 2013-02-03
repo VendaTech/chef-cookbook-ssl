@@ -31,11 +31,7 @@ module ChefSSL
       def self.create(key, type, options)
         name = EaSSL::CertificateName.new(options)
         csr  = EaSSL::SigningRequest.new(:name => name, :key => key)
-
-        data = {
-          :type => type
-        }
-        self.new('localhost', data, csr)
+        self.new('localhost', { 'type' => type }, csr)
       end
     end
   end
