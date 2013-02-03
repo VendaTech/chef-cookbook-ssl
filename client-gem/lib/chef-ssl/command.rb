@@ -55,11 +55,11 @@ command :issue do |c|
     req = ChefSSL::Client::Request.create(key, options.type, name)
     cert = authority.sign(req)
 
-    puts "#{'Key:'.cyan}"
-    puts HighLine.color(key.private_key.to_s, :bright_black)
-    puts
-    puts "#{'Certificate:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
-    puts HighLine.color(cert.to_pem, :bright_black)
+    say "#{'Key:'.cyan}"
+    say HighLine.color(key.private_key.to_s, :bright_black)
+    say ""
+    say "#{'Certificate:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
+    say HighLine.color(cert.to_pem, :bright_black)
   end
 end
 
@@ -113,13 +113,13 @@ command :search do |c|
     say "#{'Search CA'.cyan}: #{options.ca_name}" if options.ca_name
 
     client.ca_search(options.ca_name) do |req|
-      puts
+      say ""
       say "#{'     Node Hostname'.cyan}: #{req.host}"
       say "#{'  Certificate Type'.cyan}: #{req.type.bold}"
       say "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
       say "#{'      Requested CA'.cyan}: #{req.ca.bold}"
       say "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
-      puts
+      say ""
       say HighLine.color(req.to_pem, :bright_black)
     end
   end
@@ -142,13 +142,13 @@ command :sign do |c|
     say "#{'Search name'.cyan}: #{options.name}"
 
     client.common_name_search(options.name) do |req|
-      puts
+      say ""
       say "#{'     Node Hostname'.cyan}: #{req.host}"
       say "#{'  Certificate Type'.cyan}: #{req.type.bold}"
       say "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
       say "#{'      Requested CA'.cyan}: #{req.ca.bold}"
       say "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
-      puts
+      say ""
       say HighLine.color(req.to_pem, :bright_black)
 
       cert = nil
@@ -223,13 +223,13 @@ command :autosign do |c|
     say "#{'Search CA'.cyan}: #{options.ca_name}"
 
     client.ca_search(options.ca_name) do |req|
-      puts
+      say ""
       say "#{'     Node Hostname'.cyan}: #{req.host}"
       say "#{'  Certificate Type'.cyan}: #{req.type.bold}"
       say "#{'    Certificate DN'.cyan}: #{req.subject.bold}"
       say "#{'      Requested CA'.cyan}: #{req.ca.bold}"
       say "#{'Requested Validity'.cyan}: #{req.days.to_s.bold} days"
-      puts
+      say ""
       say HighLine.color(req.to_pem, :bright_black)
 
       HighLine.new.choose do |menu|
@@ -238,7 +238,7 @@ command :autosign do |c|
 
         menu.choice :yes do
           cert = authority.sign(req)
-          puts
+          say ""
           say "#{'Signed:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
           say HighLine.color(cert.to_pem, :bright_black)
           begin
