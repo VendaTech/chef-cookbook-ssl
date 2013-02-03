@@ -62,7 +62,7 @@ module Commander
   class Command
 
     # monkeypatch to not lose the method Proc, and to clear down
-    # options after call.
+    # proxy_options after call.
 
     def call args = []
       object = @when_called[0]
@@ -73,7 +73,6 @@ module Commander
       when Class ; meth != :call ? object.new.send(meth, args, options) : object.new(args, options)
       else         object.send(meth, args, options) if object
       end
-      @options = []
       @proxy_options = []
     end
 
