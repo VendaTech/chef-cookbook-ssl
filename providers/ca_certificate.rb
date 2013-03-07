@@ -1,7 +1,7 @@
 require 'digest/sha2'
 
 action :create do
-  node['cacerts'] ||= {}
+  node.set['cacerts'] ||= {}
 
   # search for CA in one of its issued certificate databags
   cacert = nil
@@ -21,7 +21,7 @@ action :create do
         owner new_resource.owner
         group new_resource.group
       end
-      node['cacerts'][new_resource.ca] = cacert
+      node.set['cacerts'][new_resource.ca] = cacert
       new_resource.updated_by_last_action(true)
     end
   end

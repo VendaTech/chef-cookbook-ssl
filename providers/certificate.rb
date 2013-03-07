@@ -30,7 +30,7 @@ action :create do
   begin
     certbag = data_bag_item('certificates', cert_id)
     if node.attribute?('csr_outbox')
-      if node['csr_outbox'].delete(new_resource.name)
+      if node.set['csr_outbox'].delete(new_resource.name)
         new_resource.updated_by_last_action(true)
       end
     end
@@ -66,7 +66,7 @@ action :create do
     end
   else
     # If we didn't, we need to generate a CSR.
-    node['csr_outbox'] ||= {}
+    node.set['csr_outbox'] ||= {}
 
     # Unless there's already a CSR in the out box, create one with a
     # new key, and issue a self-signed cert.
@@ -120,7 +120,7 @@ action :create do
         )
       end
 
-      node['csr_outbox'][new_resource.name] = {
+      node.set['csr_outbox'][new_resource.name] = {
         :id => cert_id,
         :csr => csr.to_pem,
         :key => encrypted_key,
