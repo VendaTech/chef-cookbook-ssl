@@ -17,7 +17,8 @@
 # limitations under the License.
 #
 
-include_recipe "gpg"
+include_recipe "vt-gpg"
+
 chef_gem "eassl2" do
   action :nothing
 end.run_action(:upgrade)

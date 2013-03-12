@@ -1,24 +1,24 @@
 begin
   require 'eassl'
 rescue LoadError => e
-  Chef::Log.warn("SSL library dependency 'eassl' not loaded: #{e}")
+  Chef::Log.warn("X509 library dependency 'eassl' not loaded: #{e}")
 end
 
-def ssl_generate_key(bits)
+def x509_generate_key(bits)
   return EaSSL::Key.new(:bits => bits)
 end
 
-def ssl_load_key(path)
+def x509_load_key(path)
   return EaSSL::Key.load(path)
 end
 
-def ssl_generate_csr(key, name)
+def x509_generate_csr(key, name)
   ea_name = EaSSL::CertificateName.new(name)
   ea_csr  = EaSSL::SigningRequest.new(:name => ea_name, :key => key)
   ea_csr
 end
 
-def ssl_issue_self_signed_cert(csr, type, name)
+def x509_issue_self_signed_cert(csr, type, name)
   # generate some randomness so that temporary CAs are unique, since
   # all the serial numbers are the same. some browsers will reject all
   # but the first with the same common name and serial, even if the
@@ -35,7 +35,7 @@ def ssl_issue_self_signed_cert(csr, type, name)
   return cert, ca
 end
 
-def ssl_verify_key_cert_match(key_text, cert_text)
+def x509_verify_key_cert_match(key_text, cert_text)
   key = OpenSSL::PKey::RSA.new(key_text)
   cert = OpenSSL::X509::Certificate.new(cert_text)
   key.n == cert.public_key.n

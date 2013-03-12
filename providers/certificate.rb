@@ -46,7 +46,7 @@ action :create do
 
       # verify that the certificate we've found corresponds to the key we have
       # (if not, maybe someone created the key+cert manually)
-      if ssl_verify_key_cert_match(::File.read(new_resource.key), certbag['certificate'])
+      if x509_verify_key_cert_match(::File.read(new_resource.key), certbag['certificate'])
         Chef::Log.info("installing certificate #{new_resource.name} (id #{cert_id})")
         file new_resource.certificate do
           content certbag['certificate']
@@ -76,47 +76,47 @@ action :create do
 
       if ::File.size?(new_resource.key)
         # If we already have a private key, reuse it
-        key = ssl_load_key(new_resource.key)
-        encrypted_key = gpg_encrypt(key.private_key.to_s, node['ssl']['key_vault'])
+        key = x509_load_key(new_resource.key)
+        encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
 
         # Generate the new CSR using the existing key
-        csr = ssl_generate_csr(
+        csr = x509_generate_csr(
           key,
           :common_name => new_resource.cn || new_resource.name,
-          :city => node['ssl']['city'],
-          :state => node['ssl']['state'],
-          :email => node['ssl']['email'],
-          :country => node['ssl']['country'],
-          :department => node['ssl']['department'],
-          :organization => node['ssl']['organization']
+          :city => node['x509']['city'],
+          :state => node['x509']['state'],
+          :email => node['x509']['email'],
+          :country => node['x509']['country'],
+          :department => node['x509']['department'],
+          :organization => node['x509']['organization']
         )
         cert = nil
       else
         # Generate and encrypt the private key with the public key of
         # the key vault user.
-        key = ssl_generate_key(new_resource.bits)
-        encrypted_key = gpg_encrypt(key.private_key.to_s, node['ssl']['key_vault'])
+        key = x509_generate_key(new_resource.bits)
+        encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
 
         # Generate the CSR, and sign it with a scratch CA to create a
         # temporary certificate.
-        csr = ssl_generate_csr(key,
+        csr = x509_generate_csr(key,
           :common_name => new_resource.cn || new_resource.name,
-          :city => node['ssl']['city'],
-          :state => node['ssl']['state'],
-          :email => node['ssl']['email'],
-          :country => node['ssl']['country'],
-          :department => node['ssl']['department'],
-          :organization => node['ssl']['organization']
+          :city => node['x509']['city'],
+          :state => node['x509']['state'],
+          :email => node['x509']['email'],
+          :country => node['x509']['country'],
+          :department => node['x509']['department'],
+          :organization => node['x509']['organization']
         )
-        cert, ca = ssl_issue_self_signed_cert(
+        cert, ca = x509_issue_self_signed_cert(
           csr,
           new_resource.type,
-          :city => node['ssl']['city'],
-          :state => node['ssl']['state'],
-          :email => node['ssl']['email'],
-          :country => node['ssl']['country'],
-          :department => node['ssl']['department'],
-          :organization => node['ssl']['organization']
+          :city => node['x509']['city'],
+          :state => node['x509']['state'],
+          :email => node['x509']['email'],
+          :country => node['x509']['country'],
+          :department => node['x509']['department'],
+          :organization => node['x509']['organization']
         )
       end
 

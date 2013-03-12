@@ -7,10 +7,7 @@ class Chef::Resource
 end
 
 RSpec.configure do |c|
-  c.cookbook_path = [
-    File.expand_path('../../cookbook-src', __FILE__),
-    File.expand_path('../../cookbooks', __FILE__)
-  ]
+  c.cookbook_path = File.expand_path('../../..', __FILE__)
   c.mock_with :flexmock
   c.log_level = :fatal
   c.default_attributes = {

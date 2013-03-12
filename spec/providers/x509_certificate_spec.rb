@@ -2,7 +2,7 @@ require File.expand_path('../spec_helper', File.dirname(__FILE__))
 require 'gpgme' # for GPGME::Crypto mock
 require 'eassl' # for EaSSL::Key mock
 
-describe 'ssl_certificate', :type => :provider do
+describe 'x509_certificate', :type => :provider do
 
   before(:each) do
     search = flexmock('search') do |m|
@@ -65,12 +65,13 @@ describe 'ssl_certificate', :type => :provider do
 
     it "should create key and temporary certificate" do
       # show we're initializing the EaSSL::Key with the appropriate key length
-      eknew = EaSSL::Key.method(:new)
-      flexmock(EaSSL::Key).should_receive(:new).once() # key
-        .with(FlexMock.hsh(:bits => 1024))
-        .and_return(eknew.call(:bits => 1024))
-      flexmock(EaSSL::Key).should_receive(:new).once() # temp ca key
-        .and_return(eknew.call())
+      #eknew = EaSSL::Key.method(:new)
+      #flexmock(EaSSL::Key).should_receive(:new).once() # temp ca key
+      #  .with(FlexMock.hsh(:city => 'London'))
+      #  .and_return(eknew.call())
+      #flexmock(EaSSL::Key).should_receive(:new).once() # key
+      #  .with(FlexMock.hsh(:bits => 1024))
+      #  .and_return(eknew.call(:bits => 1024))
 
       should contain_file("/tmp/cert")
         .with(:action, [:create])
@@ -138,7 +139,7 @@ describe 'ssl_certificate', :type => :provider do
         :certificate => "/tmp/cert"
       }
     }
-    let(:json_attributes) do
+    let(:json_attributes) {
       {
         'csr_outbox' => {
           'ssl.example.com' => {
@@ -146,7 +147,7 @@ describe 'ssl_certificate', :type => :provider do
           }
         }
       }
-    end
+    }
 
     it "should not touch key and certificate" do
       should contain_file("/tmp/cert")
@@ -167,7 +168,7 @@ describe 'ssl_certificate', :type => :provider do
         :certificate => "/tmp/cert"
       }
     }
-    let(:json_attributes) do
+    let(:json_attributes) {
       {
         'csr_outbox' => {
           'ssl.example.com' => {
@@ -175,7 +176,7 @@ describe 'ssl_certificate', :type => :provider do
           }
         }
       }
-    end
+    }
 
     it "should update certificate" do
       flexmock(Chef::DataBagItem).should_receive(:load)
@@ -184,12 +185,31 @@ describe 'ssl_certificate', :type => :provider do
         })
 
       # mocking File.size for the specific files the provider
+      # expects - here, the key exists
       size_method = File.method(:size?)
       flexmock(File).should_receive(:size?).with('/tmp/key')
         .and_return(true)
       flexmock(File).should_receive(:size?).and_return do |file|
         size_method.call file
       end
+
+      # mocking File.read to return the key
+      read_method = File.method(:read)
+      flexmock(File).should_receive(:read).with('/tmp/key')
+        .and_return('the-key')
+      flexmock(File).should_receive(:read).and_return do |file|
+        read_method.call file
+      end
+
+      # the key and cert should appear to be a matched pair
+      key = flexmock('key') do |m|
+        m.should_receive(:n).and_return(1)
+      end
+      cert = flexmock('cert') do |m|
+        m.should_receive('public_key.n').and_return(1)
+      end
+      flexmock(OpenSSL::PKey::RSA).should_receive(:new).and_return(key)
+      flexmock(OpenSSL::X509::Certificate).should_receive(:new).and_return(cert)
 
       should contain_file("/tmp/cert")
         .with(:action, [:create])
@@ -212,7 +232,7 @@ describe 'ssl_certificate', :type => :provider do
         :cacertificate => "/tmp/cacert",
       }
     }
-    let(:json_attributes) do
+    let(:json_attributes) {
       {
         'csr_outbox' => {
           'ssl.example.com' => {
@@ -220,7 +240,7 @@ describe 'ssl_certificate', :type => :provider do
           }
         }
       }
-    end
+    }
 
     it "should update certificate and install cacert" do
       flexmock(Chef::DataBagItem).should_receive(:load)
@@ -230,12 +250,31 @@ describe 'ssl_certificate', :type => :provider do
         })
 
       # mocking File.size for the specific files the provider
+      # expects - here, the key exists
       size_method = File.method(:size?)
       flexmock(File).should_receive(:size?).with('/tmp/key')
         .and_return(true)
       flexmock(File).should_receive(:size?).and_return do |file|
         size_method.call file
       end
+
+      # mocking File.read to return the key
+      read_method = File.method(:read)
+      flexmock(File).should_receive(:read).with('/tmp/key')
+        .and_return('the-key')
+      flexmock(File).should_receive(:read).and_return do |file|
+        read_method.call file
+      end
+
+      # the key and cert should appear to be a matched pair
+      key = flexmock('key') do |m|
+        m.should_receive(:n).and_return(1)
+      end
+      cert = flexmock('cert') do |m|
+        m.should_receive('public_key.n').and_return(1)
+      end
+      flexmock(OpenSSL::PKey::RSA).should_receive(:new).and_return(key)
+      flexmock(OpenSSL::X509::Certificate).should_receive(:new).and_return(cert)
 
       should contain_file("/tmp/cert")
         .with(:action, [:create])
@@ -250,6 +289,68 @@ describe 'ssl_certificate', :type => :provider do
     end
   end
 
+  describe 'handle mismatched key/cert when certbag shows up' do
+    let(:action) { :create }
+    let(:resource) {
+      {
+        :ca => "testCA",
+        :key => "/tmp/key",
+        :name => "ssl.example.com",
+        :certificate => "/tmp/cert"
+      }
+    }
+    let(:json_attributes) {
+      {
+        'csr_outbox' => {
+          'ssl.example.com' => {
+            'baz' => 1
+          }
+        }
+      }
+    }
+
+    it "should not touch cert or key" do
+      flexmock(Chef::DataBagItem).should_receive(:load)
+        .and_return({
+          'certificate' => 'test-cert-text'
+        })
+
+      # mocking File.size for the specific files the provider
+      # expects - here, the key is present
+      size_method = File.method(:size?)
+      flexmock(File).should_receive(:size?).with('/tmp/key')
+        .and_return(true)
+      flexmock(File).should_receive(:size?).and_return do |file|
+        size_method.call file
+      end
+
+      # mocking File.read to return the key
+      read_method = File.method(:read)
+      flexmock(File).should_receive(:read).with('/tmp/key')
+        .and_return('the-key')
+      flexmock(File).should_receive(:read).and_return do |file|
+        read_method.call file
+      end
+
+      # the key and cert should appear to be mismatched
+      key = flexmock('key') do |m|
+        m.should_receive(:n).and_return(1)
+      end
+      cert = flexmock('cert') do |m|
+        m.should_receive('public_key.n').and_return(2)
+      end
+      flexmock(OpenSSL::PKey::RSA).should_receive(:new).and_return(key)
+      flexmock(OpenSSL::X509::Certificate).should_receive(:new).and_return(cert)
+
+      should contain_file("/tmp/cert")
+        .with(:action, [:nothing])
+      should contain_file("/tmp/key")
+        .with(:action, [:nothing])
+      node['csr_outbox'].should_not have_key('ssl.example.com')
+    end
+
+  end
+
   describe 'handle missing key when certbag shows up' do
     let(:action) { :create }
     let(:resource) {
@@ -260,7 +361,7 @@ describe 'ssl_certificate', :type => :provider do
         :certificate => "/tmp/cert"
       }
     }
-    let(:json_attributes) do
+    let(:json_attributes) {
       {
         'csr_outbox' => {
           'ssl.example.com' => {
@@ -268,7 +369,7 @@ describe 'ssl_certificate', :type => :provider do
           }
         }
       }
-    end
+    }
 
     it "should not touch cert or key" do
       flexmock(Chef::DataBagItem).should_receive(:load)
@@ -277,6 +378,7 @@ describe 'ssl_certificate', :type => :provider do
         })
 
       # mocking File.size for the specific files the provider
+      # expects - here, the key is missing
       size_method = File.method(:size?)
       flexmock(File).should_receive(:size?).with('/tmp/key')
         .and_return(false)
@@ -292,4 +394,5 @@ describe 'ssl_certificate', :type => :provider do
     end
 
   end
+
 end
