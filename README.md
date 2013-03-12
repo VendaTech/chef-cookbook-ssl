@@ -4,7 +4,7 @@ Description
 Cookbook to manage deployment of X509 certificates across an
 infrastructure.
 
-Keys and CSRs are generated according to "ssl_certificate" resources
+Keys and CSRs are generated according to "x509_certificate" resources
 during a chef-client run on the hosts which will use them, with the
 CSRs pushed to the Chef server. Later, certificates are signed by the
 appropriate CAs and pushed to Chef. A subsequent run deploys the
@@ -21,7 +21,7 @@ Requirements
 
 Chef Server
 
-"gpg" Cookbook
+"vt-gpg" Cookbook
 
 "eassl2", "gpgme" gems
 
@@ -32,25 +32,25 @@ Attributes
 
 GPG is used to encrypt generated keys for archival purposes.
 
-`node['ssl']['key_vault']` - the email address of the GPG/PGP key.
+`node['x509']['key_vault']` - the email address of the GPG/PGP key.
 
 DN components to use when creating certificate names:
 
- * `node['ssl']['country']`
- * `node['ssl']['state']`
- * `node['ssl']['city']`
- * `node['ssl']['organization']`
- * `node['ssl']['department']`
- * `node['ssl']['email']`
+ * `node['x509']['country']`
+ * `node['x509']['state']`
+ * `node['x509']['city']`
+ * `node['x509']['organization']`
+ * `node['x509']['department']`
+ * `node['x509']['email']`
 
 Usage
 =====
 
-    include_recipe "ssl"
+    include_recipe "x509"
 
 Webserver SSL certificate:
 
-    ssl_certificate "www.example.com" do
+    x509_certificate "www.example.com" do
       ca "MyCA"
       key "/etc/ssl/www.example.com.key"
       certificate "/etc/ssl/www.example.com.cert"
@@ -58,7 +58,7 @@ Webserver SSL certificate:
 
 Webserver SSL certificate specifying key size and validity period:
 
-    ssl_certificate "www.example.com" do
+    x509_certificate "www.example.com" do
       ca "MyCA"
       key "/etc/ssl/www.example.com.key"
       certificate "/etc/ssl/www.example.com.cert"
@@ -68,7 +68,7 @@ Webserver SSL certificate specifying key size and validity period:
 
 REST API Server Certificate, with CA Certificate:
 
-    ssl_certificate "service.example.com" do
+    x509_certificate "service.example.com" do
       ca "Service-CA"
       key "/etc/ssl/service.example.com.key"
       certificate "/etc/ssl/service.example.com.cert"
@@ -77,7 +77,7 @@ REST API Server Certificate, with CA Certificate:
 
 REST API Client Certificate:
 
-    ssl_certificate "service-#{node['fqdn']}" do
+    x509_certificate "service-#{node['fqdn']}" do
       cn node['fqdn']
       ca "Service-CA"
       type "client"
@@ -87,7 +87,7 @@ REST API Client Certificate:
 
 CA Certificate only, for verification:
 
-    ssl_ca_certificate "My-CA" do
+    x509_ca_certificate "My-CA" do
       cacertificate "/etc/myca.pem"
     end
 
@@ -145,7 +145,7 @@ See the chef-ssl program's embedded help text for options:
 Workflow
 ========
 
-1) Use the `ssl_certificate` resource in a recipe, and run chef-client
+1) Use the `x509_certificate` resource in a recipe, and run chef-client
 on the node.  The first converge of the resource does the following:
 
  * Creates a new key, with no passphrase.

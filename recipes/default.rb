@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: ssl
+# Cookbook Name:: x509
 # Recipe:: default
 #
 # Copyright 2011-2012 Venda Ltd
