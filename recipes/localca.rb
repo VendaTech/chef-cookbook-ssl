@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 
-node['cacerts'] ||= {}
+node.set['cacerts'] ||= {}
 
 certs_dir = '/etc/pki/tls/certs' # XXX platform dependent
 
@@ -38,7 +38,7 @@ search('certificates') do |item|
         mode 0644
       end
 
-      node['cacerts'][hash_path] = item['cacert']
+      node.set['cacerts'][hash_path] = item['cacert']
     end
   end
 end
