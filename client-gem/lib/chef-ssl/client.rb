@@ -29,10 +29,25 @@ module ChefSSL
       chef_server_url = Chef::Config.chef_server_url
       chef_server_url.gsub!(/\/$/, '')
 
+      if Chef::Config.ssl_verify_mode == :verify_none
+        verify_mode = OpenSSL::SSL::VERIFY_NONE
+      else
+        verify_mode = OpenSSL::SSL::VERIFY_PEER
+      end
+
       Spice.setup do |s|
         s.server_url = chef_server_url
         s.client_name = Chef::Config.node_name
         s.client_key = Spice.read_key_file(File.expand_path(Chef::Config.client_key))
+        s.connection_options = {
+          :ssl => {
+            :verify_mode => verify_mode,
+            :client_cert => Chef::Config.ssl_client_cert,
+            :client_key => Chef::Config.ssl_client_key,
+            :ca_path => Chef::Config.ssl_ca_path,
+            :ca_file => Chef::Config.ssl_ca_file,
+          }
+        }
       end
     end
 

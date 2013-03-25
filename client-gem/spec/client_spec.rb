@@ -34,6 +34,7 @@ describe ChefSSL::Client do
         m.should_receive(:server_url=).once()
         m.should_receive(:client_name=).once()
         m.should_receive(:client_key=).once()
+        m.should_receive(:connection_options=).once()
       end
       flexmock(Spice) do |m|
         m.should_receive(:reset)
@@ -149,5 +150,3 @@ describe ChefSSL::Client do
   end
 
 end
-
-
