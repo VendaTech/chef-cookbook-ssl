@@ -77,7 +77,12 @@ action :create do
       if ::File.size?(new_resource.key)
         # If we already have a private key, reuse it
         key = x509_load_key(new_resource.key)
-        encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
+
+        if node['x509']['key_vault']
+          encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
+        else
+          encrypted_key = nil
+        end
 
         # Generate the new CSR using the existing key
         csr = x509_generate_csr(
@@ -95,7 +100,12 @@ action :create do
         # Generate and encrypt the private key with the public key of
         # the key vault user.
         key = x509_generate_key(new_resource.bits)
-        encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
+
+        if node['x509']['key_vault']
+          encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
+        else
+          encrypted_key = nil
+        end
 
         # Generate the CSR, and sign it with a scratch CA to create a
         # temporary certificate.
