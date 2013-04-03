@@ -26,16 +26,18 @@ action :create do
   name_sha = Digest::SHA256.new << new_resource.name
   cert_id = name_sha.to_s
 
-  # try: get databag
-  begin
-    certbag = data_bag_item('certificates', cert_id)
+  # Try to find this certificate in the data bag.
+  certbag = search(:certificates, "id:#{cert_id}").first
+  if certbag
+    # Data bag item found - the CSR was processed, and can be removed
+    # from the outbox
     if node.attribute?('csr_outbox')
       if node.set['csr_outbox'].delete(new_resource.name)
         new_resource.updated_by_last_action(true)
       end
     end
-  rescue Net::HTTPServerException
-    certbag = {}
+  else
+    certbag ||= {}
   end
 
   if certbag['certificate']
