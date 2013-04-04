@@ -50,15 +50,14 @@ action :create do
       # (if not, maybe someone created the key+cert manually)
       if x509_verify_key_cert_match(::File.read(new_resource.key), certbag['certificate'])
         Chef::Log.info("installing certificate #{new_resource.name} (id #{cert_id})")
-        file new_resource.certificate do
-          content certbag['certificate']
-          action :create
-        end
+        f = resource("file[#{new_resource.certificate}]")
+        f.content certbag['certificate']
+        f.action :create
+        
         if new_resource.cacertificate && certbag['cacert']
-          file new_resource.cacertificate do
-            content certbag['cacert']
-            action :create
-          end
+          f = resource("file[#{new_resource.cacertificate}]")
+          f.content certbag['cacert']
+          f.action :create
         end
       else
         Chef::Log.warn("not installing certificate #{new_resource.name} (id #{cert_id}), does not match key")
@@ -133,27 +132,28 @@ action :create do
       }
 
       # write out the key
-      file new_resource.key do
-        content key.private_key.to_s
-        action :create
-      end
+      f = resource("file[#{new_resource.key}]")
+      f.content key.private_key.to_s
+      f.action :create
 
       # write out the cert if we created a temporary one
       unless cert.nil?
-        file new_resource.certificate do
-          content cert.to_pem
-          action :create
-        end
+        f = resource("file[#{new_resource.certificate}]")
+        f.content cert.to_pem
+        f.action :create
       end
 
       if new_resource.cacertificate && !ca.nil?
-        file new_resource.cacertificate do
-          content ca.certificate.to_pem
-          action :create
-        end
+        f = resource("file[#{new_resource.cacertificate}]")
+        f.content ca.certificate.to_pem
+        f.action :create
       end
 
       new_resource.updated_by_last_action(true)
     end
   end
+end
+
+def resource(name)
+  run_context.resource_collection.find(name)
 end
