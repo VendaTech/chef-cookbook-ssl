@@ -8,7 +8,7 @@ describe 'x509_certificate', :type => :provider do
     search = flexmock('search') do |m|
       m.should_receive(:search).with_any_args()
     end
-    flexmock(Chef::Search::Query).should_receive(:new).and_return(search)
+    flexmock(Chef::Search::Query).should_receive(:new).and_return(search).by_default
     flexmock(Chef::DataBagItem).should_receive(:load)
       .and_raise(Net::HTTPServerException.new(1, 2)).by_default
     flexmock(GPGME::Crypto).should_receive(:new).
@@ -179,10 +179,14 @@ describe 'x509_certificate', :type => :provider do
     }
 
     it "should update certificate" do
-      flexmock(Chef::DataBagItem).should_receive(:load)
-        .and_return({
-          'certificate' => 'test-cert-text'
-        })
+      # Mocking search() looking for the certificate databag item
+      search_query = "id:729c42d574be013c27ee3600bd87018825792c9d15057d2b0b8833796aa09e19"
+      search = flexmock('search') do |m|
+        m.should_receive(:search)
+          .with(:certificates, search_query, FlexMock.any)
+          .and_yield( {'certificate' => 'test-cert-text'} )
+      end
+      flexmock(Chef::Search::Query).should_receive(:new).and_return(search)
 
       # mocking File.size for the specific files the provider
       # expects - here, the key exists
@@ -243,11 +247,17 @@ describe 'x509_certificate', :type => :provider do
     }
 
     it "should update certificate and install cacert" do
-      flexmock(Chef::DataBagItem).should_receive(:load)
-        .and_return({
-          'certificate' => 'test-cert-text',
-          'cacert' => 'test-cacert-text'
+      # Mocking search() looking for the certificate databag item
+      search_query = "id:729c42d574be013c27ee3600bd87018825792c9d15057d2b0b8833796aa09e19"
+      search = flexmock('search') do |m|
+        m.should_receive(:search)
+          .with(:certificates, search_query, FlexMock.any)
+          .and_yield({
+             'certificate' => 'test-cert-text',
+             'cacert' => 'test-cacert-text'
         })
+      end
+      flexmock(Chef::Search::Query).should_receive(:new).and_return(search)
 
       # mocking File.size for the specific files the provider
       # expects - here, the key exists
@@ -310,10 +320,14 @@ describe 'x509_certificate', :type => :provider do
     }
 
     it "should not touch cert or key" do
-      flexmock(Chef::DataBagItem).should_receive(:load)
-        .and_return({
-          'certificate' => 'test-cert-text'
-        })
+      # Mocking search() looking for the certificate databag item
+      search_query = "id:729c42d574be013c27ee3600bd87018825792c9d15057d2b0b8833796aa09e19"
+      search = flexmock('search') do |m|
+        m.should_receive(:search)
+          .with(:certificates, search_query, FlexMock.any)
+          .and_yield( {'certificate' => 'test-cert-text'} )
+      end
+      flexmock(Chef::Search::Query).should_receive(:new).and_return(search)
 
       # mocking File.size for the specific files the provider
       # expects - here, the key is present
@@ -372,10 +386,14 @@ describe 'x509_certificate', :type => :provider do
     }
 
     it "should not touch cert or key" do
-      flexmock(Chef::DataBagItem).should_receive(:load)
-        .and_return({
-          'certificate' => 'test-cert-text'
-        })
+      # Mocking search() looking for the certificate databag item
+      search_query = "id:729c42d574be013c27ee3600bd87018825792c9d15057d2b0b8833796aa09e19"
+      search = flexmock('search') do |m|
+        m.should_receive(:search)
+          .with(:certificates, search_query, FlexMock.any)
+          .and_yield( {'certificate' => 'test-cert-text'} )
+      end
+      flexmock(Chef::Search::Query).should_receive(:new).and_return(search)
 
       # mocking File.size for the specific files the provider
       # expects - here, the key is missing
