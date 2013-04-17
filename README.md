@@ -181,6 +181,16 @@ node[:csr_outbox].  The existing key and certificate will not be
 touched.
 
 
+TESTING
+=======
+
+There are rspec tests in the spec directory, which use the rspec-chef
+library bundled with the cookbook. These can be run directly:
+
+  $ bundle
+  $ bundle exec rspec spec/**/*_spec.rb
+
+
 TODO
 ====
 
