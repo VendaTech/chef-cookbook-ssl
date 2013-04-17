@@ -32,7 +32,9 @@ Attributes
 
 GPG is used to encrypt generated keys for archival purposes.
 
-`node['x509']['key_vault']` - the email address of the GPG/PGP key.
+`node['x509']['key_vault']` - the email address of the GPG/PGP recipient.
+
+When set to nil (the default), keys will not be archived.
 
 DN components to use when creating certificate names:
 
