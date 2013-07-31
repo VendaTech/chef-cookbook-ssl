@@ -51,7 +51,11 @@ action :create do
       if x509_verify_key_cert_match(::File.read(new_resource.key), certbag['certificate'])
         Chef::Log.info("installing certificate #{new_resource.name} (id #{cert_id})")
         f = resource("file[#{new_resource.certificate}]")
-        f.content certbag['certificate']
+        if new_resource.joincachain && certbag['cacert']
+          f.content certbag['certificate'] + certbag['cacert']
+        else
+          f.content certbag['certificate']
+        end
         f.action :create
         
         if new_resource.cacertificate && certbag['cacert']
