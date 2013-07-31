@@ -48,6 +48,8 @@ module ChefSSL
           :key => @req.key,
           :type => @req.type,
           :date => Time.now.to_s,
+          :not_after => @cert.not_after,
+          :not_before => @cert.not_before,
           :host => @req.host,
           :certificate => @cert.to_pem
         }
