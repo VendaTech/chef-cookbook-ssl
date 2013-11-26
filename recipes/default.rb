@@ -17,11 +17,6 @@
 # limitations under the License.
 #
 
-# We only need vt-gpg if we're using the keyvault
-if node['x509']['key_vault']
-  include_recipe "vt-gpg"
-end
-
 chef_gem "eassl2" do
   action :nothing
 end.run_action(:upgrade)
