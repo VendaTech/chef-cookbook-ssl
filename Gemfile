@@ -1,4 +1,4 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
 
 # testing-framework deps
 gem 'chef', '10.14.2'
