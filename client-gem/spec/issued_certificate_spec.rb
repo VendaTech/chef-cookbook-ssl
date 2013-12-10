@@ -47,6 +47,8 @@ describe ChefSSL::Client::IssuedCertificate do
     end
     cert = flexmock('cert') do |m|
       m.should_receive(:to_pem).once().and_return('cert-pem-text')
+      m.should_receive(:not_before).once().and_return('not-before-date')
+      m.should_receive(:not_after).once().and_return('not-after-date')
     end
     flexmock(Time).should_receive(:now).once().and_return(Time.new('2001-01-01 00:00:00'))
 
@@ -73,6 +75,8 @@ describe ChefSSL::Client::IssuedCertificate do
     end
     cert = flexmock('cert') do |m|
       m.should_receive(:to_pem).once().and_return('cert-pem-text')
+      m.should_receive(:not_before).once().and_return('not-before-date')
+      m.should_receive(:not_after).once().and_return('not-after-date')
     end
     ca = flexmock('ca') do |m|
       m.should_receive('certificate.to_pem').once().and_return('cacert-pem-text')
@@ -108,6 +112,8 @@ describe ChefSSL::Client::IssuedCertificate do
     end
     cert = flexmock('cert') do |m|
       m.should_receive(:to_pem).once().and_return('cert-pem-text')
+      m.should_receive(:not_before).once().and_return('not-before-date')
+      m.should_receive(:not_after).once().and_return('not-after-date')
     end
     flexmock(Time).should_receive(:now).once().and_return(Time.new('2001-01-01 00:00:00'))
 
@@ -135,6 +141,8 @@ describe ChefSSL::Client::IssuedCertificate do
     end
     cert = flexmock('cert') do |m|
       m.should_receive(:to_pem).once().and_return('cert-pem-text')
+      m.should_receive(:not_before).once().and_return('not-before-date')
+      m.should_receive(:not_after).once().and_return('not-after-date')
     end
     flexmock(Time).should_receive(:now).once().and_return(Time.new('2001-01-01 00:00:00'))
 
