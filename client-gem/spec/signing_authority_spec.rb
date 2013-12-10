@@ -48,7 +48,7 @@ EOCSR
         .and_yield(StringIO.new)
 
       name = OpenSSL::X509::Name.parse('CN=Test CA')
-      ChefSSL::Client::SigningAuthority.create(name, 'test-ca', 'abc')
+      ChefSSL::Client::SigningAuthority.create(name, 'test-ca', 'abcd')
     end
 
   end
