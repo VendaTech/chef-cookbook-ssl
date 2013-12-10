@@ -65,6 +65,7 @@ module ChefSSL
         nodes = Spice.nodes("csr_outbox_*")
       end
       nodes.each do |node|
+        next if node.normal['csr_outbox'].nil?
         node.normal['csr_outbox'].each do |id, data|
           next if data['csr'].nil? # XXX warn, raise?
           yield Request.new(node.name, data)
