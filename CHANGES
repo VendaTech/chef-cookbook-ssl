@@ -1,0 +1,18 @@
+Changelog for the 'x509' cookbook, and the 'chef-ssl-client' gem.
+
+Version 1.1.0
+
+ * Switch to secure rubygems source to avoid deprecation warning from
+   Bundler (Doug Barth)
+
+ * Optionally add the CA certificate into the deployed certificate
+   file. (Arnold Krille)
+
+ * Add not_before and not_after dates into the certificate databag
+   (Arnold Krille)
+
+ * Avoid crashing on bad node data (Michael Hart)
+
+ * Work around lack of Base64.urlsafe_encode64 on Ruby 1.8
+   (Holger Just)
+
