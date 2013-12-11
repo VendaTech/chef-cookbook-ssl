@@ -23,7 +23,7 @@ def x509_issue_self_signed_cert(csr, type, name)
   # all the serial numbers are the same. some browsers will reject all
   # but the first with the same common name and serial, even if the
   # certificate is different.
-  rand = Base64.urlsafe_encode64(OpenSSL::Random.pseudo_bytes(12))
+  rand = urlsafe_encode64(OpenSSL::Random.pseudo_bytes(12))
   name[:common_name] = "Temporary CA #{rand}"
   ca = EaSSL::CertificateAuthority.new(:name => name)
   cert = EaSSL::Certificate.new(
@@ -39,4 +39,13 @@ def x509_verify_key_cert_match(key_text, cert_text)
   key = OpenSSL::PKey::RSA.new(key_text)
   cert = OpenSSL::X509::Certificate.new(cert_text)
   key.n == cert.public_key.n
+end
+
+def urlsafe_encode64(bin)
+  if Base64.respond_to?(:urlsafe_encode64)
+    # Only available in Ruby 1.9
+    Base64.urlsafe_encode64(bin)
+  else
+    [bin].pack("m0").chomp("\n").tr("+/", "-_")
+  end
 end
