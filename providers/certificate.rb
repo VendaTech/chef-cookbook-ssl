@@ -1,4 +1,6 @@
 require 'digest/sha2'
+require 'eassl'
+require 'openssl'
 
 action :create do
 
@@ -53,7 +55,7 @@ action :create do
         f = resource("file[#{new_resource.certificate}]")
         f.content certbag['certificate']
         f.action :create
-        
+
         if new_resource.cacertificate && certbag['cacert']
           f = resource("file[#{new_resource.cacertificate}]")
           f.content certbag['cacert']
@@ -74,6 +76,9 @@ action :create do
     if node['csr_outbox'][new_resource.name]
       Chef::Log.warn("skipping CSR generation - CSR is in the outbox")
     else
+
+      Chef::Log.info "new_resource.key " + new_resource.key
+      Chef::Log.info "new_resource.key size #{::File.size?(new_resource.key)}"
 
       if ::File.size?(new_resource.key)
         # If we already have a private key, reuse it
@@ -100,64 +105,136 @@ action :create do
       else
         # Generate and encrypt the private key with the public key of
         # the key vault user.
-        key = x509_generate_key(new_resource.bits)
+        # key = x509_generate_key(new_resource.bits)
 
-        if node['x509']['key_vault']
-          encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
-        else
-          encrypted_key = nil
-        end
+        # if node['x509']['key_vault']
+        #   encrypted_key = gpg_encrypt(key.private_key.to_s, node['x509']['key_vault'])
+        # else
+        #   encrypted_key = nil
+        # end
+
+
+        if !::File.exists?(new_resource.certificate) &&
+           !::File.exists?(new_resource.key) then
+
+          Chef::Log.info "HEREERERRRERE"
+          Chef::Log.info "nr.name " + new_resource.name
+
+          options = {
+            :common_name => new_resource.cn || new_resource.name,
+            :city => node['x509']['city'],
+            :state => node['x509']['state'],
+            :email => node['x509']['email'],
+            :country => node['x509']['country'],
+            :department => node['x509']['department'],
+            :organization => node['x509']['organization']
+          }
+
+          key = OpenSSL::PKey::RSA.new(1024)
+          public_key = key.public_key
+
+          subject = "/C=#{node['x509']['country']}/O=#{node['x509']['organization']}/OU=#{node['x509']['department']}/CN=#{new_resource.name}"
+
+          Chef::Log.info "subject " + subject
+
+          cert = OpenSSL::X509::Certificate.new
+          cert.subject = cert.issuer = OpenSSL::X509::Name.parse(subject)
+          cert.not_before = Time.now
+          cert.not_after = Time.now + 365 * 24 * 60 * 60
+          cert.public_key = public_key
+          cert.serial = 0x0
+          cert.version = 2
+
+          ef = OpenSSL::X509::ExtensionFactory.new
+          ef.subject_certificate = cert
+          ef.issuer_certificate = cert
+          cert.extensions = [
+            ef.create_extension("basicConstraints","CA:TRUE", true),
+            ef.create_extension("subjectKeyIdentifier", "hash"),
+            # ef.create_extension("keyUsage", "cRLSign,keyCertSign", true),
+          ]
+          cert.add_extension ef.create_extension("authorityKeyIdentifier",
+                                                 "keyid:always,issuer:always")
+
+          cert.sign key, OpenSSL::Digest::SHA1.new
+
+          Chef::Log.info cert.to_pem
+
+          file new_resource.certificate do
+             content cert.to_pem
+             owner "root"
+             group "root"
+             mode "0644"
+             action :create
+           end
+
+          file new_resource.key do
+              content key.to_pem
+              owner "root"
+              group "root"
+              mode "0644"
+              action :create
+           end
+
+        end # if both cert and key are missing
 
         # Generate the CSR, and sign it with a scratch CA to create a
         # temporary certificate.
-        csr = x509_generate_csr(key,
-          :common_name => new_resource.cn || new_resource.name,
-          :city => node['x509']['city'],
-          :state => node['x509']['state'],
-          :email => node['x509']['email'],
-          :country => node['x509']['country'],
-          :department => node['x509']['department'],
-          :organization => node['x509']['organization']
-        )
-        cert, ca = x509_issue_self_signed_cert(
-          csr,
-          new_resource.type,
-          :city => node['x509']['city'],
-          :state => node['x509']['state'],
-          :email => node['x509']['email'],
-          :country => node['x509']['country'],
-          :department => node['x509']['department'],
-          :organization => node['x509']['organization']
-        )
+        # csr = x509_generate_csr(key,
+        #   :common_name => new_resource.cn || new_resource.name,
+        #   :city => node['x509']['city'],
+        #   :state => node['x509']['state'],
+        #   :email => node['x509']['email'],
+        #   :country => node['x509']['country'],
+        #   :department => node['x509']['department'],
+        #   :organization => node['x509']['organization']
+        # )
+
+        # Chef::Log.info csr
+        # Chef::Log.info ""
+
+        # cert, ca = x509_issue_self_signed_cert(
+        #   csr,
+        #   new_resource.type,
+        #   :name => new_resource.cn || new_resource.name,
+        #   :city => node['x509']['city'],
+        #   :state => node['x509']['state'],
+        #   :email => node['x509']['email'],
+        #   :country => node['x509']['country'],
+        #   :department => node['x509']['department'],
+        #   :organization => node['x509']['organization']
+        # )
+        # Chef::Log.info cert
+        # Chef::Log.info ""
       end
 
-      node.set['csr_outbox'][new_resource.name] = {
-        :id => cert_id,
-        :csr => csr.to_pem,
-        :key => encrypted_key,
-        :ca => new_resource.ca,
-        :date => Time.now.to_s,
-        :type => new_resource.type,
-        :days => new_resource.days
-      }
+      # node.set['csr_outbox'][new_resource.name] = {
+      #   :id => cert_id,
+      #   :csr => csr.to_pem,
+      #   :key => encrypted_key,
+      #   :ca => new_resource.ca,
+      #   :date => Time.now.to_s,
+      #   :type => new_resource.type,
+      #   :days => new_resource.days
+      # }
 
-      # write out the key
-      f = resource("file[#{new_resource.key}]")
-      f.content key.private_key.to_s
-      f.action :create
+      # # write out the key
+      # f = resource("file[#{new_resource.key}]")
+      # f.content key.private_key.to_s
+      # f.action :create
 
-      # write out the cert if we created a temporary one
-      unless cert.nil?
-        f = resource("file[#{new_resource.certificate}]")
-        f.content cert.to_pem
-        f.action :create
-      end
+      # # write out the cert if we created a temporary one
+      # unless cert.nil?
+      #   f = resource("file[#{new_resource.certificate}]")
+      #   f.content cert.to_pem
+      #   f.action :create
+      # end
 
-      if new_resource.cacertificate && !ca.nil?
-        f = resource("file[#{new_resource.cacertificate}]")
-        f.content ca.certificate.to_pem
-        f.action :create
-      end
+      # if new_resource.cacertificate && !ca.nil?
+      #   f = resource("file[#{new_resource.cacertificate}]")
+      #   f.content ca.certificate.to_pem
+      #   f.action :create
+      # end
 
       new_resource.updated_by_last_action(true)
     end
