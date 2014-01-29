@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+#^syntax detection
+
+site 'http://community.opscode.com/api/v1'
+
+cookbook 'minitest-handler', '1.1.2'
+cookbook 'x509', :path => '.'
+cookbook 'x509_test', :path => 'test/cookbooks/x509_test'
+cookbook 'vt-gpg', '1.0.0'

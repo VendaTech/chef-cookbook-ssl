@@ -1,0 +1,8 @@
+---
+provisioner: chef_zero
+
+suites:
+- name: default
+  run_list:
+    - recipe[minitest-handler]
+    - recipe[x509_test]
