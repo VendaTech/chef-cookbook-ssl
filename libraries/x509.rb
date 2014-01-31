@@ -4,6 +4,8 @@ rescue LoadError => e
   Chef::Log.warn("X509 library dependency 'eassl' not loaded: #{e}")
 end
 
+require 'base64'
+
 def x509_generate_key(bits)
   return EaSSL::Key.new(:bits => bits)
 end

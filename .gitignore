@@ -6,3 +6,4 @@
 Cheffile.lock
 .librarian
 tmp
+spec/reports

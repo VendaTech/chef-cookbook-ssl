@@ -1,15 +1,12 @@
-require 'spec_helper'
 require 'eassl'
+require 'rspec'
+require_relative '../../../libraries/x509'
 
-describe "x509::x509", :type => 'library' do
+RSpec.configure do |c|
+  c.mock_with 'flexmock'
+end
 
-  before(:all) do
-    search = flexmock('search') do |m|
-      m.should_receive(:search).with_any_args()
-    end
-    flexmock(Chef::Search::Query).should_receive(:new).and_return(search)
-    subject # init subject
-  end
+describe 'x509' do
 
   it "should generate a new private key" do
     x509_generate_key(2048).class.should == EaSSL::Key
