@@ -49,3 +49,13 @@ def urlsafe_encode64(bin)
     [bin].pack("m0").chomp("\n").tr("+/", "-_")
   end
 end
+
+#return an array of revoked certificate serial numbers
+def x509_revoked_serials()
+  serials = Array.new()
+  certs = search(:revoked_certificates)
+  certs.each do |cert|
+    serials << cert['serial']
+  end
+  return serials
+end

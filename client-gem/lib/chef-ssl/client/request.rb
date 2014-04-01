@@ -3,6 +3,7 @@ module ChefSSL
     class Request
 
       attr_reader :host, :csr, :type, :ca, :id, :name, :key, :days
+      attr_writer :id, :ca, :host
 
       def initialize(host, data, csr=nil)
         @host = host

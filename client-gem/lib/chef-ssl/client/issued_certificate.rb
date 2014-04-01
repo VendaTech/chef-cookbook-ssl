@@ -3,8 +3,10 @@ module ChefSSL
     class CertSaveFailed < StandardError; end
 
     class IssuedCertificate
+      attr_accessor :req
 
       DATABAG = "certificates"
+      REVOKED_DATABAG = "revoked_certificates"
 
       def initialize(req, cert, ca=nil)
         @ca = ca

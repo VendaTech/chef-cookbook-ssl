@@ -9,16 +9,23 @@ command :issue do |c|
   c.syntax = "chef-ssl issue [options]"
   c.description = "Issue an ad hoc certificate"
   c.example "Issue cert for www.venda.com",
-            "chef-ssl issue --ca-path ./myCA --dn /CN=foo --type server"
+            "chef-ssl issue --ca-path ./myCA --dn /CN=foo --type server --save"
 
   c.option "--ca-path=STRING", String, "the path to the new CA"
   c.option "--dn=STRING", String, "the distinguished name for the new certificate"
   c.option "--type=STRING", String, "the type of certificate, client or server"
+  c.option "--save", "save certificate in data bag, false by default"
+  c.option "--host=STRING", String, "hostname to put in saved certificate, required if --save is specified"
+  c.option "--ca-name=STRING", String, "Name of the CA to be used, default is the DN in the CA certificate"
 
   c.action do |args, options|
     raise "CA path is required" unless options.ca_path
     raise "DN is required" unless options.dn
     raise "type is required" unless options.type
+
+    if options.save and not options.host
+      raise "host required if --save is specified."
+    end
 
     begin
       dn = OpenSSL::X509::Name.parse(options.dn)
@@ -33,6 +40,8 @@ command :issue do |c|
     unless options.type == 'server' || options.type == 'client'
       raise "type must be server or client"
     end
+    
+    client = ChefSSL::Client.new
 
     authority = ChefSSL::Client.load_authority(
       :password => ask("Enter CA passphrase:  ") { |q| q.echo = false },
@@ -55,11 +64,29 @@ command :issue do |c|
     req = ChefSSL::Client::Request.create(key, options.type, name)
     cert = authority.sign(req)
 
+    if options.save
+      #need to set id and CA name
+      name_sha = Digest::SHA256.new << dn.to_s
+      cert_id = name_sha.to_s
+      cert.req.id = cert_id
+      if options.ca_name
+        cert.req.ca = options.ca_name
+      else
+        cert.req.ca = authority.dn
+      end
+      cert.req.host = options.host
+      cert.save!
+    end 
+
     say "#{'Key:'.cyan}"
     say HighLine.color(key.private_key.to_s, :bright_black)
     say ""
     say "#{'Certificate:'.cyan} SHA1 Fingerprint=#{cert.sha1_fingerprint}"
     say HighLine.color(cert.to_pem, :bright_black)
+    if options.save
+      say ""
+      say "#{'ID:'.cyan} #{cert.req.id.to_s}"
+    end
   end
 end
 
@@ -256,5 +283,47 @@ command :autosign do |c|
     end
 
     say "All CSRs processed."
+  end
+end
+
+command :revoke do |c|
+  c.syntax = "chef-ssl revoke HOSTNAME"
+  c.description = "Revoke a certificate for the given HOSTNAME"
+  c.example "Revoke for test.example.com",
+            "chef-ssl revoke test.example.com"
+  c.action do |args, options|
+    if args.size < 1
+      say "Error, specify a HOSTNAME to revoke."
+    else 
+      #get authority, don't load it because we don't need or 
+      #want the passphrase
+      client = ChefSSL::Client.new
+      args.each do |host|
+        client.revoke_certificate(host)
+      end
+    end
+  end
+end
+
+command :gencrl do |c|
+  c.syntax = "chef-ssl gencrl"
+  c.description = "Generate a Certificate Revocation List from revoked certificates"
+  c.example "Generate the CRL", "chef-ssl gencrl --ca-path=/opt/myca --ca-config=conf/myca.conf --crlfilename=mycrl.pem"
+  c.option "--ca-path=STRING", String, "the path to the signing CA"
+  c.option "--ca-config=STRING", String, "the path to the config file of your CA. Can be absolute or relative to ca-path"
+  c.option "--crlfilename=STRING", String, "name of CRL file to generate, default is crl.pem. Can be absolute or relative to ca-path"
+  c.option "--revoked-path=STRING", String, "directory where revoked certificates should be placed, default is ./revoked relative to the ca-path"
+  c.action do |args, options|
+    raise "--ca-path is required" unless options.ca_path
+    raise "--ca-config is required" unless options.ca_config
+    options.default :crlfilename => "crl.pem"
+    options.default :revoked_path => "./revoked"
+    passphrase = ask("Enter CA passphrase:  ") { |q| q.echo = false }
+    client = ChefSSL::Client.new
+    authority = ChefSSL::Client.load_authority(
+      :password => passphrase,
+      :path => options.ca_path
+    )
+    client.generate_crl(passphrase, options.ca_path, options.ca_config, options.crlfilename, options.revoked_path, authority)
   end
 end
