@@ -127,8 +127,10 @@ module ChefSSL
             if revoke_item['revoked'] == false
               raise "Certificate for host '" + hostname + "' has been marked as revoked but not properly revoked yet. Run 'chef-ssl gencrl' first, then rerun this command."
             else
-              new_id = move_revoked_data_bag(revoke_item)
+              new_id = move_revoked_cert(revoke_item)
               say "A certificate for hostname '" + hostname + "' has already been revoked, moved it to a new id: " + new_id
+	      #look it up again because we changed it in move_revoked_cert()
+              revoke_item = Spice.data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item['id'])
             end
           end
 
@@ -151,13 +153,10 @@ module ChefSSL
     # private helper to move a certificate to a new id in the revoked certificate data bag
     def move_revoked_cert(cert)
       #generate new id based on CN, date issued, and date revoked to get a new unique id
-      id_shaw = Digest::SHA256.new << cert['dn'] << cert['date'] << cert['revoked_date']
+      id_sha = Digest::SHA256.new << cert['dn'] << cert['date'] << cert['revoked_date']
       new_id = id_sha.to_s
-      params = {
-        :id => new_id
-      }
-      cert.attrs.merge!(params)
-      Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, new_id, cert.attrs)
+      cert.attrs['id'] = new_id
+      Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert.attrs)
       return new_id
     end
 

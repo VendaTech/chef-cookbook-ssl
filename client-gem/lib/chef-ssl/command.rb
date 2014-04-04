@@ -324,6 +324,6 @@ command :gencrl do |c|
       :path => options.ca_path
     )
     options.default :ca_name => authority.dn
-    client.generate_crl(passphrase, options.ca_path, options.ca_config, options.crlfilename, options.revoked_path, authority, ca_name)
+    client.generate_crl(passphrase, options.ca_path, options.ca_config, options.crlfilename, options.revoked_path, authority, options.ca_name)
   end
 end
