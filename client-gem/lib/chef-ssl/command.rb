@@ -295,8 +295,6 @@ command :revoke do |c|
     if args.size < 1
       say "Error, specify a HOSTNAME to revoke."
     else 
-      #get authority, don't load it because we don't need or 
-      #want the passphrase
       client = ChefSSL::Client.new
       args.each do |host|
         client.revoke_certificate(host)
