@@ -93,6 +93,14 @@ CA Certificate only, for verification:
       cacertificate "/etc/myca.pem"
     end
 
+Retrieve the CRL for a CA. The resource name specified must match the 
+--ca-name parameter used when running `chef-ssl gencrl`. Ideally we'd use the 
+DN of the CA but the format wreaks havoc on chef searches:
+
+    x509_crl "My-CA" do
+      path "/etc/public/My-CA.crl.pem"
+    end
+
 Signing Client
 ==============
 
@@ -170,7 +178,7 @@ following:
 
 4) If the certificate needs to be revoked for say 'foo.bar.com', revoking it is a two step process:
  * Revoke the certificate: `chef-ssl revoke foo.bar.com`
- * Generate the CRL: `chef-ssl gencrl --ca-path ./cadir --ca-config ./cadir/conf/ca.conf`
+ * Generate the CRL: `chef-ssl gencrl --ca-path ./cadir --ca-config ./cadir/conf/ca.conf --ca-name "My CA Alias"`
 
 Occasionally certificates need to be issued outside of the chef cookbook use, for example, for load balancers:
 
@@ -195,7 +203,6 @@ So the two steps are:
 
 The main limitation is that certificates generated using the "chef-ssl issue" command may not be stored in the data bag(s) and thus must be revoked manually using the `openssl ca -revoke` command. The `chef-ssl gencrl` will include them in the updated CRL. As of v1.2 of the chef-ssl tool, the "chef-ssl issue" command support saving the issued certificate in the certificates databag by specifying the "--save" option.
 
-
 FAQ
 ===
 
@@ -208,7 +215,7 @@ Q) My certificate is about to expire - how can I generate a new CSR?
 
 A) Remove the databag item for the certificate.  The next time
 chef-client is run on the node, a new CSR will be placed in
-node[:csr_outbox].  The existing key and certificate will not be
+node[:csr\_outbox].  The existing key and certificate will not be
 touched.
 
 Q) How does chef-ssl interact with an existing openssl directory structure?
@@ -231,6 +238,17 @@ my_ca
 |  +--serial.txt  -> ../conf/serial
 ```
 
+Q) I've revoked a certificate by mistake and need to undo my mistake!
+
+A) If you've revoked it using `chef-ssl revoke oops.example.com` then you can reverse it by:
+
+1. Find the certificate data bag id: `knife search revoked\_certificates 'host:oops.example.com'`. Assume the id is 01234abc for the remainder of this example.
+2. Download the cert to a local json file: `knife data bag revoked\_certificates 01234abc -F json &gt;oops.example.com.json`
+3. Edit the json file, remove the "revoked" attribute.
+4. Upload the json file to the certificates data bag: `knife data bag from file certificates oops.example.com.json`
+5. Remove the item from the revoked data bag: `knife data bag delete revoked\_certificates 01234abc`
+
+If you've already run the `chef-ssl gencrl` command that certificate is beyond hope. Run chef-client again and the node should generate a new CSR. 
 
 TESTING
 =======

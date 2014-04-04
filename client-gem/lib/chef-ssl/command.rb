@@ -309,6 +309,7 @@ command :gencrl do |c|
   c.example "Generate the CRL", "chef-ssl gencrl --ca-path=/opt/myca --ca-config=conf/myca.conf --crlfilename=mycrl.pem"
   c.option "--ca-path=STRING", String, "the path to the signing CA"
   c.option "--ca-config=STRING", String, "the path to the config file of your CA. Can be absolute or relative to ca-path"
+  c.option "--ca-name=STRING", String, "name of the CA saved as 'ca_name' attribute in the crl data bag. Useful for searches, defaults to the DN"
   c.option "--crlfilename=STRING", String, "name of CRL file to generate, default is crl.pem. Can be absolute or relative to ca-path"
   c.option "--revoked-path=STRING", String, "directory where revoked certificates should be placed, default is ./revoked relative to the ca-path"
   c.action do |args, options|
@@ -322,6 +323,7 @@ command :gencrl do |c|
       :password => passphrase,
       :path => options.ca_path
     )
-    client.generate_crl(passphrase, options.ca_path, options.ca_config, options.crlfilename, options.revoked_path, authority)
+    options.default :ca_name => authority.dn
+    client.generate_crl(passphrase, options.ca_path, options.ca_config, options.crlfilename, options.revoked_path, authority, ca_name)
   end
 end

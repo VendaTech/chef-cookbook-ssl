@@ -120,9 +120,16 @@ module ChefSSL
             #try create the cert in the revoked data bag
             revoke_item = Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item.attrs)
           rescue Spice::Error::Conflict
-            #already exists can't deal with it.
-            say "Certificate for hostname '" + hostname + "' has already been revoked."
-            next
+            #already exists, so overwrite it. Likely the cert for the CN has been revoked previously, then a 
+            #new cert signed for that CN, and now we're revoking a new cert for the same CN. If revoked:true, it has been
+            #properly revoked already, move it. Else fail because it needs to be properly revoked.
+            revoke_item = Spice.data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item['id'])
+            if revoke_item['revoked'] == false
+              raise "Certificate for host '" + hostname + "' has been marked as revoked but not properly revoked yet. Run 'chef-ssl gencrl' first, then rerun this command."
+            else
+              new_id = move_revoked_data_bag(revoke_item)
+              say "A certificate for hostname '" + hostname + "' has already been revoked, moved it to a new id: " + new_id
+            end
           end
 
           #get serial 
@@ -139,6 +146,19 @@ module ChefSSL
         end
       end
       say "Revoked " + num_revoked.to_s + " certificates for '" + hostname + "'."
+    end
+
+    # private helper to move a certificate to a new id in the revoked certificate data bag
+    def move_revoked_cert(cert)
+      #generate new id based on CN, date issued, and date revoked to get a new unique id
+      id_shaw = Digest::SHA256.new << cert['dn'] << cert['date'] << cert['revoked_date']
+      new_id = id_sha.to_s
+      params = {
+        :id => new_id
+      }
+      cert.attrs.merge!(params)
+      Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, new_id, cert.attrs)
+      return new_id
     end
 
     # private helper to get serial from a certificate
@@ -159,7 +179,7 @@ module ChefSSL
     
     #private helper function, takes a CRL file (pem format) and uploads it to the certificate_revocation_list data bag
     #using the CA 
-    def upload_crl(crlfilename, authority) 
+    def upload_crl(crlfilename, authority, ca_name) 
       now = DateTime.now()
       crl_data_bag = get_or_create_databag(SigningAuthority::CRL_DATABAG)
       #ID must match: /^[\-[:alnum:]_]+$/ so ID is hash of the dn
@@ -169,6 +189,7 @@ module ChefSSL
         :id => crl_id, 
         :crl => IO.read(crlfilename),
         :dn => authority.dn,
+        :ca_name => ca_name,
         :updated_date => now.strftime("%Y-%m-%d %H:%M:%S %z")
       }
       begin
@@ -196,7 +217,7 @@ module ChefSSL
     # The SigningAuthority is passed here but not actually used except for getting the 
     # DN from the key. Since there is no OpenSSL API to revoke the cert or generate a CRL
     # we have to # call out to openssl proper to do so.
-    def generate_crl(passphrase, capath, caconfig, crlfilename, revoked_path, authority)
+    def generate_crl(passphrase, capath, caconfig, crlfilename, revoked_path, authority, ca_name)
       #look through the revoked data bag and get items that have revoked:false set
       num_revoked = 0
 
@@ -231,7 +252,7 @@ module ChefSSL
       say "Generated CRL '" + crlfilename + "'."
 
       #upload CRL to data bag
-      upload_crl(crlfilename, authority)
+      upload_crl(crlfilename, authority, ca_name)
       say "Uploaded CRL to chef."
     end
       
