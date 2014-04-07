@@ -98,8 +98,20 @@ Retrieve the CRL for a CA. The resource name specified must match the
 DN of the CA but the format wreaks havoc on chef searches:
 
     x509_crl "My-CA" do
-      path "/etc/public/My-CA.crl.pem"
+      action :create
     end
+
+If you want you specify a path for the CRL file. However due to some oddities with
+OpenVPN (and thus likely openssl) that are not fully documented, to function properly the
+CRL must be saved as /etc/ssl/certs/<hash>.r0 where the hash is that of the CA. The x509_crl
+provider by default does the hash generation and puts it in the correct place. If you need
+to find the the file to specify in another recipy, use the x509_get_crl_path() method 
+(defined in x509/libraries/x509.rb) and it will return the fully qualified path to the CRL. For 
+example:
+
+    crl_path = x509_get_crl_path("My-CA")
+
+
 
 Signing Client
 ==============

@@ -175,11 +175,22 @@ module ChefSSL
       end
       return data_bag
     end
-    
+  
+    #get the hash of the CA that signed this CRL
+    #command: openssl crl -in crl.pem -hash -noout 
+    def get_crl_hash(crlfilename)
+      cmd = 'openssl crl -in ' + crlfilename + ' -hash -noout'
+      hash = %x[ #{cmd} ]
+      hash.delete!("\n")
+      return hash
+    end
+
+ 
     #private helper function, takes a CRL file (pem format) and uploads it to the certificate_revocation_list data bag
     #using the CA 
     def upload_crl(crlfilename, authority, ca_name) 
       now = DateTime.now()
+      ca_hash = get_crl_hash(crlfilename)
       crl_data_bag = get_or_create_databag(SigningAuthority::CRL_DATABAG)
       #ID must match: /^[\-[:alnum:]_]+$/ so ID is hash of the dn
       name_sha = Digest::SHA256.new << authority.dn
@@ -189,6 +200,7 @@ module ChefSSL
         :crl => IO.read(crlfilename),
         :dn => authority.dn,
         :ca_name => ca_name,
+        :hash => ca_hash,
         :updated_date => now.strftime("%Y-%m-%d %H:%M:%S %z")
       }
       begin
