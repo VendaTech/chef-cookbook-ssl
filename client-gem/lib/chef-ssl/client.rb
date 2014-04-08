@@ -102,6 +102,7 @@ module ChefSSL
     def revoke_certificate(hostname)
       now = DateTime.now()
       revoke_params = {
+        "id" => nil,
         "revoked" => false,
         "revoked_date" => now.strftime("%Y-%m-%d %H:%M:%S %z"),
         "serial" => nil
@@ -116,55 +117,31 @@ module ChefSSL
       raw_items.each do |raw_item|
         cert_item = Spice.data_bag_item(IssuedCertificate::DATABAG, raw_item[0])
         if cert_item['host'] == hostname
-          orig_attrs = cert_item.attrs.clone
-          begin
-            #try create the cert in the revoked data bag
-            revoke_item = Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item.attrs)
-          rescue Spice::Error::Conflict
-            #already exists, so overwrite it. Likely the cert for the CN has been revoked previously, then a 
-            #new cert signed for that CN, and now we're revoking a new cert for the same CN. If revoked:true, it has been
-            #properly revoked already, move it. Else fail because it needs to be properly revoked.
-            revoke_item = Spice.data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item['id'])
-            if revoke_item['revoked'] == false
-              raise "Certificate for host '" + hostname + "' has been marked as revoked but not properly revoked yet. Run 'chef-ssl gencrl' first, then rerun this command."
-            else
-              new_id = move_revoked_cert(revoke_item)
-              say "A certificate for hostname '" + hostname + "' has already been revoked, moved it to a new id: " + new_id
-	      #create it up again because we deleted it in move_revoked_cert()
-              revoke_item = Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, orig_attrs)
-            end
-          end
+          #clone attributes so we don't clobber ourselves
+          orig_id = cert_item['id']
+          cert_attrs = cert_item.attrs.clone
 
+          #create an id that shouldn't conflict with what's already in the revoked data bag. Quite possible we have
+          #revoked a cert for a DN before and now have a second one.
+          id_sha = Digest::SHA256.new << cert_item['dn'] << cert_item['date'] << revoke_params['revoked_date']
+          revoke_params['id'] = id_sha.to_s
+          
           #get serial 
-          revoke_params['serial'] = get_serial(revoke_item['certificate'])
+          revoke_params['serial'] = get_serial(cert_attrs['certificate'])
 
           #add our new params and update
-          revoke_item.attrs.merge!(revoke_params)
-          Spice.update_data_bag_item(IssuedCertificate::REVOKED_DATABAG, revoke_item['id'], revoke_item.attrs)
+          cert_attrs.merge!(revoke_params)
+          
+          #create the cert in the revoked data bag
+          revoke_item = Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_attrs)
 
-          #finally delete the item we're looking at.
-          Spice.delete_data_bag_item(IssuedCertificate::DATABAG, cert_item['id'])
+          #finally delete the item we're looking at. Use orig_id because Spice does something weird.
+          Spice.delete_data_bag_item(IssuedCertificate::DATABAG, orig_id)
 
           num_revoked += 1
         end
       end
       say "Revoked " + num_revoked.to_s + " certificates for '" + hostname + "'."
-    end
-
-    # private helper to move a certificate to a new id in the revoked certificate data bag
-    def move_revoked_cert(cert)
-      #generate new id based on CN, date issued, and date revoked to get a new unique id
-      old_id = cert['id']
-      id_sha = Digest::SHA256.new << cert['dn'] << cert['date'] << cert['revoked_date']
-      new_id = id_sha.to_s
-      params = {
-        "id" => new_id
-      }
-      new_attrs = cert.attrs.clone
-      new_attrs.merge!(params)
-      Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, new_attrs)
-      Spice.delete_data_bag_item(IssuedCertificate::REVOKED_DATABAG, old_id)
-      return new_id
     end
 
     # private helper to get serial from a certificate
