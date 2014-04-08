@@ -102,9 +102,9 @@ module ChefSSL
     def revoke_certificate(hostname)
       now = DateTime.now()
       revoke_params = {
-        :revoked => false,
-        :revoked_date => now.strftime("%Y-%m-%d %H:%M:%S %z"),
-        :serial => nil
+        "revoked" => false,
+        "revoked_date" => now.strftime("%Y-%m-%d %H:%M:%S %z"),
+        "serial" => nil
       }
       num_revoked = 0
 
@@ -116,6 +116,7 @@ module ChefSSL
       raw_items.each do |raw_item|
         cert_item = Spice.data_bag_item(IssuedCertificate::DATABAG, raw_item[0])
         if cert_item['host'] == hostname
+          orig_attrs = cert_item.attrs.clone
           begin
             #try create the cert in the revoked data bag
             revoke_item = Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item.attrs)
@@ -129,8 +130,8 @@ module ChefSSL
             else
               new_id = move_revoked_cert(revoke_item)
               say "A certificate for hostname '" + hostname + "' has already been revoked, moved it to a new id: " + new_id
-	      #look it up again because we changed it in move_revoked_cert()
-              revoke_item = Spice.data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert_item['id'])
+	      #create it up again because we deleted it in move_revoked_cert()
+              revoke_item = Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, orig_attrs)
             end
           end
 
@@ -153,10 +154,16 @@ module ChefSSL
     # private helper to move a certificate to a new id in the revoked certificate data bag
     def move_revoked_cert(cert)
       #generate new id based on CN, date issued, and date revoked to get a new unique id
+      old_id = cert['id']
       id_sha = Digest::SHA256.new << cert['dn'] << cert['date'] << cert['revoked_date']
       new_id = id_sha.to_s
-      cert.attrs['id'] = new_id
-      Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, cert.attrs)
+      params = {
+        "id" => new_id
+      }
+      new_attrs = cert.attrs.clone
+      new_attrs.merge!(params)
+      Spice.create_data_bag_item(IssuedCertificate::REVOKED_DATABAG, new_attrs)
+      Spice.delete_data_bag_item(IssuedCertificate::REVOKED_DATABAG, old_id)
       return new_id
     end
 
@@ -196,12 +203,12 @@ module ChefSSL
       name_sha = Digest::SHA256.new << authority.dn
       crl_id = name_sha.to_s
       crl_params = {
-        :id => crl_id, 
-        :crl => IO.read(crlfilename),
-        :dn => authority.dn,
-        :ca_name => ca_name,
-        :hash => ca_hash,
-        :updated_date => now.strftime("%Y-%m-%d %H:%M:%S %z")
+        "id" => crl_id, 
+        "crl" => IO.read(crlfilename),
+        "dn" => authority.dn,
+        "ca_name" => ca_name,
+        "hash" => ca_hash,
+        "updated_date" => now.strftime("%Y-%m-%d %H:%M:%S %z")
       }
       begin
         #try create the cert in the revoked data bag
@@ -234,8 +241,8 @@ module ChefSSL
 
       now = DateTime.now()
       revoked_attributes = {
-        :revoked => true,
-        :revoked_date_v2 => now.strftime("%Y-%m-%d %H:%M:%S %z")
+        "revoked" => true,
+        "revoked_date_v2" => now.strftime("%Y-%m-%d %H:%M:%S %z")
       }
 
       #loop through data bag items, using get and then retrieval due to spice issue
