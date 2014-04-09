@@ -49,3 +49,31 @@ def urlsafe_encode64(bin)
     [bin].pack("m0").chomp("\n").tr("+/", "-_")
   end
 end
+
+#return an array of revoked certificate serial numbers
+def x509_revoked_serials()
+  serials = Array.new()
+  certs = search(:revoked_certificates)
+  certs.each do |cert|
+    serials << cert['serial']
+  end
+  return serials
+end
+
+#private get a crl item for the CA specified from the data bag
+def x509_get_crl(caname)
+  # search for CRL in one of its issued certificate databags
+  items = search('certificate_revocation_list', "ca:#{caname}") 
+  if items.nil? or items.size == 0
+    raise "Could not find CRL for CA '#{caname}'"
+  elsif items.size > 1
+    raise "Found more than one CRL for CA '#{caname}', there can only be one."
+  end
+  return items[0]
+end
+
+#for a caname in the certificate_revocation_list data bag, return the path to the file
+def x509_get_crl_path(caname) 
+  item = x509_get_crl(caname)
+  return "/etc/ssl/certs/#{item['hash']}.r0"  
+end

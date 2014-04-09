@@ -1,6 +1,10 @@
+require 'digest/sha2'
+
 module ChefSSL
   class Client
     class SigningAuthority
+
+      CRL_DATABAG = "certificate_revocation_list" 
 
       def self.load(options)
         ca = EaSSL::CertificateAuthority.load(

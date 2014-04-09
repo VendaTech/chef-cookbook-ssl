@@ -1,5 +1,9 @@
 Changelog for the 'x509' cookbook, and the 'chef-ssl-client' gem.
 
+Version 1.2.0
+ 
+ * Add support for the revoke and gencrl commands. (Michael Hart)
+
 Version 1.1.0
 
  * Switch to secure rubygems source to avoid deprecation warning from

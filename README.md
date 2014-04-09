@@ -93,6 +93,26 @@ CA Certificate only, for verification:
       cacertificate "/etc/myca.pem"
     end
 
+Retrieve the CRL for a CA. The resource name specified must match the 
+--ca-name parameter used when running `chef-ssl gencrl`. Ideally we'd use the 
+DN of the CA but the format wreaks havoc on chef searches:
+
+    x509_crl "My-CA" do
+      action :create
+    end
+
+If you want you specify a path for the CRL file. However due to some oddities with
+OpenVPN (and thus likely openssl) that are not fully documented, to function properly the
+CRL must be saved as /etc/ssl/certs/<hash>.r0 where the hash is that of the CA. The x509_crl
+provider by default does the hash generation and puts it in the correct place. If you need
+to find the the file to specify in another recipy, use the x509_get_crl_path() method 
+(defined in x509/libraries/x509.rb) and it will return the fully qualified path to the CRL. For 
+example:
+
+    crl_path = x509_get_crl_path("My-CA")
+
+
+
 Signing Client
 ==============
 
@@ -132,9 +152,11 @@ See the chef-ssl program's embedded help text for options:
 
     Commands:
       autosign             Search for CSRs and sign them with the given CA
+      gencrl               Generate a Certificate Revocation List from revoked certificates
       help                 Display global or [command] help documentation.
       issue                Issue an ad hoc certificate
       makeca               Creates a new CA
+      revoke               Revoke a certificate for the given HOSTNAME
       search               Searches for outstanding CSRs
       sign                 Search for the given CSR by name and provide a signed certificate
 
@@ -146,6 +168,8 @@ See the chef-ssl program's embedded help text for options:
 
 Workflow
 ========
+
+Regular use via the chef cookbooks:
 
 1) Use the `x509_certificate` resource in a recipe, and run chef-client
 on the node.  The first converge of the resource does the following:
@@ -161,9 +185,35 @@ signed certificate is placed into a databag item.
 following:
 
  * Retrieves the certificate databag item.
- * Removes the corresponding entry from `node[:csr_outbox]`.
+ * Removes the corresponding entry from `node[:csr\_outbox]`.
  * Installs the signed certificate from the databag.
 
+4) If the certificate needs to be revoked for say 'foo.bar.com', revoking it is a two step process:
+ * Revoke the certificate: `chef-ssl revoke foo.bar.com`
+ * Generate the CRL: `chef-ssl gencrl --ca-path ./cadir --ca-config ./cadir/conf/ca.conf --ca-name "My CA Alias"`
+
+Occasionally certificates need to be issued outside of the chef cookbook use, for example, for load balancers:
+
+1) Issue the certificate
+ * `chef-ssl issue --ca-path ./cadir --dn /CN=foo.bar --type client --save --host "foo.bar"`
+ * the CSR and Certificate are stored in the certificates data bag. The key and certificate are printed to stdout.
+
+Revoking Certificates
+=====================
+
+A few notes about revoking certificates. This is a two step process on purpose. Some background:
+
+ * There is no API in openssl to revoke certificates. It is done using the "openssl ca -revoke" command line.
+ * To revoke a certificate you need the CA passphrase. Storing this insecurely is a horrible idea. 
+ * The author had a requirement to support marking certificates as 'revoked' using tools other than chef-ssl (ie: python) but maintaining the workflow.
+
+So the two steps are:
+
+1) Using `chef-ssl revoke`, move the certificate from the "certificates" data bag to the "revoked\_certificates" data bag, adding "revoked: false", "serial" set with the certificate's serial number (in decimal) and "revoked\_date" with the current date/time. Other recipes, if required, can pull the list of revoked certificates and store them locally to reject new incoming connections as needed (ie: OpenVPN etc which supports a directory of decimal serial numbers as of v2.3, etc). This movement of the certificate data bag item can be easily emulated by other languages as well. 
+
+2) Using `chef-ssl gencrl`, really revoke the certificates that are marked "revoked: false" using the openssl command, set "revoked: true" and add "revoked\_date\_v2" with the current date/time. Once that is done for any number of certificates, generate the CRL file using the `openssl ca -gencrl` command. Note that this command will generate the CRL for all revoked certificates including those revoked outside of the chef-ssl tool. For convenience the CRL file is uploaded to the `certificate_revocation_list` data bag.
+
+The main limitation is that certificates generated using the "chef-ssl issue" command may not be stored in the data bag(s) and thus must be revoked manually using the `openssl ca -revoke` command. The `chef-ssl gencrl` will include them in the updated CRL. As of v1.2 of the chef-ssl tool, the "chef-ssl issue" command support saving the issued certificate in the certificates databag by specifying the "--save" option.
 
 FAQ
 ===
@@ -177,9 +227,40 @@ Q) My certificate is about to expire - how can I generate a new CSR?
 
 A) Remove the databag item for the certificate.  The next time
 chef-client is run on the node, a new CSR will be placed in
-node[:csr_outbox].  The existing key and certificate will not be
+node[:csr\_outbox].  The existing key and certificate will not be
 touched.
 
+Q) How does chef-ssl interact with an existing openssl directory structure?
+
+A) It doesn't unfortunately. OpenSSL installations typically, but not always, have a `/public`, `/private` and `/conf` directories and the config file in the `/conf` directory specifies the name of the CA key and certificate files, the EaSSL2 library used by chef-ssl does not support this. It expects one directory with three files in it, `cakey.pem`, `cacert.pem` and `serial.txt`. To deal with this, in your openssl root directory create a `/chef` directory, and link the CA's cert, key and serial file as required. For example:
+
+```
+my_ca
++--public
+|  +--my_ca_cert.pem
++--private
+|  +--my_ca_key.pem
++--conf
+|  +--my_ca_config.conf
+|  +--serial
+|  +--index
++--chef
+|  +--cakey.pem   -> ../private/my_ca_key.pem
+|  +--cacert.pem  -> ../public/my_ca_cert.pem
+|  +--serial.txt  -> ../conf/serial
+```
+
+Q) I've revoked a certificate by mistake and need to undo my mistake!
+
+A) If you've revoked it using `chef-ssl revoke oops.example.com` then you can reverse it by:
+
+1. Find the certificate data bag id: `knife search revoked\_certificates 'host:oops.example.com'`. Assume the id is 01234abc for the remainder of this example.
+2. Download the cert to a local json file: `knife data bag revoked\_certificates 01234abc -F json &gt;oops.example.com.json`
+3. Edit the json file, remove the "revoked" attribute.
+4. Upload the json file to the certificates data bag: `knife data bag from file certificates oops.example.com.json`
+5. Remove the item from the revoked data bag: `knife data bag delete revoked\_certificates 01234abc`
+
+If you've already run the `chef-ssl gencrl` command that certificate is beyond hope. Run chef-client again and the node should generate a new CSR. 
 
 TESTING
 =======
@@ -193,7 +274,6 @@ library bundled with the cookbook. These can be run directly:
 
 TODO
 ====
-
 
 
 Licence and Author
