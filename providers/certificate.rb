@@ -27,7 +27,19 @@ action :create do
   cert_id = name_sha.to_s
 
   # Try to find this certificate in the data bag.
-  certbag = search(:certificates, "id:#{cert_id}").first
+  # TODO-chef12: This hack is required due to a bug in chef-client 12.1.1.
+  # BEGIN HACK
+  if Chef::VERSION < '12'
+    certbag = search(:certificates, "id:#{cert_id}").first
+  else
+    # The structure of results has changed in chef 12, so we need to extract the value into a format that we expect.
+    certbag = search(:certificates, "id:#{cert_id}", nil, nil, 1000).first
+    if certbag # required because you can't call first on a nil value.
+      certbag = certbag.first
+    end
+  end
+  # END HACK
+
   if certbag
     # Data bag item found - the CSR was processed, and can be removed
     # from the outbox
